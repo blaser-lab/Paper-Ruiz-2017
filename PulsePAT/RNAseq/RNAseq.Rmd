@@ -1,0 +1,301 @@
+---
+title: "PulsePAT-RNAseq"
+author: "Victoria Ruiz & Thomas W. Battaglia"
+output:
+  pdf_document: 
+    highlight: tango
+    toc: true
+  html_document:
+    highlight: pygments
+    theme: journal
+---
+
+
+```{r setup, include = F}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+
+# For RNAseq-related data
+#library(checkpoint)
+#checkpoint("2017-04-01", checkpointLocation = tempdir())
+library(DESeq2)
+library(ggplot2)
+library(ggthemes)
+library(fdrtool)
+library(pheatmap)
+library(RColorBrewer)
+library(tidyverse)
+library(org.Mm.eg.db)
+```
+
+### 1. Introduction
+This is an Rmarkdown document which contains the R code for the RNA-sequencing analysis found within the manuscript "Ruiz et al. (2017)". Details about the tools and steps for processing the ileal transcriptome dataset can be found within the **'Methods'** section of the respective manuscript. This fastq files used to generate this data set is hosted on ArrayExpress under the ascension number [E-MTAB-5101](https://www.ebi.ac.uk/arrayexpress/experiments/E-MTAB-5101/).
+
+
+#### 1a. Load the necessary libraries
+```{r library, message = FALSE, warnings = FALSE}
+# For RNAseq-related data
+library(DESeq2)
+library(ggplot2)
+library(fdrtool)
+library(pheatmap)
+library(RColorBrewer)
+library(tidyverse)
+library(org.Mm.eg.db)
+```
+
+
+#### 1b. Import the DESeq2 object containing the counts and metadata
+```{r deseq}
+load("data/deseq2_obj.rda")
+```
+
+----
+
+### Section 2: Compare Control vs. PAT within pups at day 52 of life
+To find any significant genes altered due to early life antibiotic perturbation, we will subset to compare the two treatment groups.
+```{r pups_deseq}
+# Subset to only analyze pups
+ddPups <- ddsMat[ ,which(ddsMat$Breeder_Pup == "pup")]
+
+# Run DESEq2
+ddPups <- DESeq(ddPups)
+
+# Get results from testing with FDR adjust pvalues
+ddPups_res <- results(ddPups, pAdjustMethod = "fdr", alpha = 0.05)
+
+# Find out FC directionality
+## Tylosin / Control 
+mcols(ddPups_res, use.names = T)
+
+# Generate summary of testing. 
+summary(ddPups_res)
+```
+
+
+#### 2a. Add gene annotations
+```{r, pups_annotate}
+# Load mouse gene annotation
+library(org.Mm.eg.db)
+
+# Add gene annotation
+ddPups_res$description <- mapIds(x = org.Mm.eg.db,
+                                 keys = row.names(ddPups_res),
+                                 column = "GENENAME",
+                                 keytype = "SYMBOL",
+                                 multiVals = "first")
+
+# Add gene symbol
+ddPups_res$symbol <- row.names(ddPups_res)
+
+# Add ENTREZ ID
+ddPups_res$entrez <- mapIds(x = org.Mm.eg.db,
+                            keys = row.names(ddPups_res),
+                            column = "ENTREZID",
+                            keytype = "SYMBOL",
+                            multiVals = "first")
+
+# Add GO terms
+ddPups_res$GO <- mapIds(x = org.Mm.eg.db,
+                        keys = row.names(ddPups_res),
+                        column = "GO",
+                        keytype = "SYMBOL",
+                        multiVals = "first")
+
+# Subset for only significant genes (q < 0.05)
+ddPups_res_sig <- subset(ddPups_res, padj < 0.05)
+summary(ddPups_res_sig)
+
+# Remove any gene without an ENTREZ-id annotation (cannot be used in any pathway)
+ddPups_res_sig_filter <- subset(ddPups_res_sig, is.na(entrez) == F & symbol != "Gm5739" & symbol != "2900052L18Rik")
+summary(ddPups_res_sig_filter)
+```
+
+#### 2c. Plot Volcano Plot
+```{r, pups_volcano}
+# Check directionality of the log2 fold change values
+# PAT / Control
+mcols(ddPups_res)
+
+# Gather Log-fold change and FDR-corrected pvalues from DESeq2 results
+pups_data <- data.frame(gene = row.names(ddPups_res),
+                        pval = -log10(ddPups_res$padj), 
+                        lfc = ddPups_res$log2FoldChange)
+
+# Remove any rows that have NA as an entry
+pups_data <- na.omit(pups_data)
+
+# Color the points which are up or down
+## If fold-change > 0 and pvalue > 1.3 (Increased significant)
+## If fold-change < 0 and pvalue > 1.3 (Decreased significant)
+pups_data <- mutate(pups_data, color = case_when(pups_data$lfc > 0 & pups_data$pval > 1.3 ~ "PAT",
+                                                 pups_data$lfc < 0 & pups_data$pval > 1.3 ~ "Control",
+                                                 pups_data$pval < 1.3 ~ "nonsignificant"))
+
+# Make a basic ggplot2 object with x-y values
+pups_vol <- ggplot(pups_data, aes(x = lfc, y = pval, color = color))
+
+# Add ggplot2 layers
+pups_vol = pups_vol +   
+  ggtitle(label = "Pups") +
+  geom_point(size = 2.5, alpha = 0.8, na.rm = T) +
+  annotate("text", label = "Control", x = -3, y = 85, size = 7, colour = "black") +
+  annotate("text", label = "PAT", x = 3, y = 85, size = 7, colour = "black") +
+  scale_color_manual(values = c("PAT" = "#E64B35", "Control" = "#3182bd", "nonsignificant" = "#636363")) +
+  scale_x_continuous(limits = c(-5, 5)) +
+  scale_y_continuous(limits = c(0, 90), trans = "log1p") +
+  theme_bw(base_size = 14) + 
+  theme(legend.position = "none") + 
+  xlab(expression(log[2]("PAT" / "Control"))) + 
+  ylab(expression(-log[10]("adjusted p-value"))) + 
+  geom_hline(yintercept = 1.3, colour = "darkgrey")
+pups_vol
+```
+
+----
+
+### Section 3: Compare Control vs. PAT within dams at day 110 of life
+```{r dams_deseq}
+# Subset to only analyze pups
+ddDams <- ddsMat[ ,which(ddsMat$Breeder_Pup == "Breeder")]
+
+# Run DESEq2
+ddDams <- DESeq(ddDams)
+
+# Get results from testing with FDR adjust pvalues
+ddDams_res <- results(ddDams, pAdjustMethod = "fdr", alpha = 0.05)
+
+# Find out FC directionality
+## Tylosin (PAT) / Control 
+mcols(ddDams_res, use.names = T)
+
+# Generate summary of testing. 
+summary(ddDams_res)
+```
+
+
+#### 2a. Add gene annotations
+```{r, dams_annotate}
+# Add gene annotation
+ddDams_res$description <- mapIds(x = org.Mm.eg.db,
+                                 keys = row.names(ddDams_res),
+                                 column = "GENENAME",
+                                 keytype = "SYMBOL",
+                                 multiVals = "first")
+
+# Add gene symbol
+ddDams_res$symbol <- row.names(ddDams_res)
+
+# Add ENTREZ ID
+ddDams_res$entrez <- mapIds(x = org.Mm.eg.db,
+                            keys = row.names(ddDams_res),
+                            column = "ENTREZID",
+                            keytype = "SYMBOL",
+                            multiVals = "first")
+
+# Add GO terms
+ddDams_res$GO <- mapIds(x = org.Mm.eg.db,
+                        keys = row.names(ddDams_res),
+                        column = "GO",
+                        keytype = "SYMBOL",
+                        multiVals = "first")
+
+# Subset for only significant genes (q < 0.05)
+ddDams_res_sig <- subset(ddDams_res, padj < 0.05)
+summary(ddDams_res_sig)
+
+# Remove any gene without an ENTREZ-id annotation (cannot be used in any pathway)
+ddDams_res_sig_filter <- subset(ddDams_res_sig, is.na(entrez) == F)
+summary(ddDams_res_sig_filter)
+```
+
+
+#### 3b. Plot Volcano Plot
+```{r dams_volcano}
+# Check directionality of the log2 fold change values
+# PAT / Control
+mcols(ddDams_res)
+
+# Gather Log-fold change and FDR-corrected pvalues from DESeq2 results
+dams_data <- data.frame(gene = row.names(ddDams_res),
+                        pval = -log10(ddDams_res$padj), 
+                        lfc = ddDams_res$log2FoldChange)
+
+# Remove any rows that have NA as an entry
+dams_data <- na.omit(dams_data)
+
+# Color the points which are up or down
+## If fold-change > 0 and pvalue > 1.3 (Increased significant)
+## If fold-change < 0 and pvalue > 1.3 (Decreased significant)
+dams_data <- mutate(dams_data, color = case_when(dams_data$lfc > 0 & dams_data$pval > 1.3 ~ "PAT",
+                                                 dams_data$lfc < 0 & dams_data$pval > 1.3 ~ "Control",
+                                                 dams_data$pval < 1.3 ~ "nonsignificant"))
+
+# Make a basic ggplot2 object with x-y values
+dams_vol <- ggplot(dams_data, aes(x = lfc, y = pval, color = color))
+
+# Add ggplot2 layers
+dams_vol = dams_vol +   
+  ggtitle(label = "Dams") +
+  geom_point(size = 2.5, alpha = 0.8, na.rm = T) +
+  annotate("text", label = "Control", x = -3, y = 85, size = 7, colour = "black") +
+  annotate("text", label = "PAT", x = 3, y = 85, size = 7, colour = "black") +
+  scale_color_manual(values = c("PAT" = "#E64B35", "Control" = "#3182bd", "nonsignificant" = "#636363")) +
+  scale_x_continuous(limits = c(-5, 5)) +
+  scale_y_continuous(limits = c(0, 90), trans = "log1p") +
+  theme_bw(base_size = 14) + 
+  theme(legend.position = "none") + 
+  xlab(expression(log[2]("PAT" / "Control"))) + 
+  ylab(expression(-log[10]("adjusted p-value"))) + 
+  geom_hline(yintercept = 1.3, colour = "darkgrey")
+dams_vol
+```
+
+
+----
+
+#### Figure 2f. Plot Volcano Plot
+```{r volcano_multiplot, fig.height=5, fig.width=11, dpi=150}
+# Use both volcano plots to create a new single side-by-side figure
+## using the package Rmisc
+Rmisc::multiplot(pups_vol, dams_vol, cols = 2)
+```
+
+
+#### Figure 2g. Significant gene counts 
+This figure summarizes the number of genes found between the pups and the dams. It shows the dramatic difference between the two groups when antibiotics are given early in life.
+```{r barplot}
+# Number of siginicant genes (Pups)
+## LFC > 0 (up)     : 552, 43% 
+## LFC < 0 (down)   : 746, 57% 
+summary(ddPups_res_sig_filter)
+
+# Number of siginicant genes (Dams)
+## LFC > 0 (up)     : 62, 60% 
+## LFC < 0 (down)   : 41, 40% 
+summary(ddDams_res_sig_filter)
+
+# Create dataframe to store numbers
+gene_barplot = data.frame(Group = c("Pups", "Pups", "Dams", "Dams"),
+                          Direction = c("Up", "Down", "Up", "Down"),
+                          Number = c(552, 746, 62, 41))
+
+# Plot using ggplot2
+gene_barplot %>%
+  mutate(Group = factor(Group, levels = c("Pups", "Dams"))) %>%
+  mutate(Direction = factor(Direction, levels = c("Up", "Down"))) %>%
+  ggplot(aes(x = Group, y = Number, group = "black")) +
+  geom_col() +
+  facet_grid(.~ Direction, switch = "y") +
+  theme_minimal(base_size = 16) +
+  xlab("") + ylab("Number of genes") +
+  geom_text(aes(x = Group, y = Number, label = Number), size = 5, vjust = -0.5) +
+  scale_y_continuous(limits = c(0, 800))
+```
+
+
+
+
+```{r session_info}
+sessionInfo()
+```
