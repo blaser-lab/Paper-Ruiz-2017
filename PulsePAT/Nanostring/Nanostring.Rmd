@@ -1,0 +1,90 @@
+---
+title: "PulsePAT-Nanostring"
+author: "Thomas W. Battaglia"
+output:
+  pdf_document: default
+  html_document:
+    highlight: pygments
+    theme: journal
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+### 1. Introduction
+This is an Rmarkdown document which contains the R code for the Nanostring RNA-array analysis found within the manuscript "Ruiz et al. (2017)". Details about the tools and steps for processing the ileal transcriptome dataset can be found within the **'Methods'** section of the respective manuscript. The files used to generate this data set is hosted on GEO under the accession number [GSE98022](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE98022). This workflow will use a saved RDA file from the analysis instead of hosting the raw data.
+
+
+#### 1a. Install and load the necessary libraries
+```{r library, message = FALSE, warnings = FALSE}
+source("scripts/geneExpress.R")
+library(Biobase)
+library(DESeq)
+library(ggplot2)
+library(dplyr)
+library(RColorBrewer)
+library(stats)
+library(ggplot2)
+library(pheatmap)
+library(RColorBrewer)
+library(org.Mm.eg.db)
+```
+
+
+#### 1b. Import the eSet object containing the counts and metadata
+```{r deseq}
+load("data/nanostring_eset.rda")
+```
+
+----
+
+### Compare Control vs. PAT1 vs. PAT3 at day 52 of life
+```{r stats}
+# Run significance testing function
+## Output is an ExpressionSet, data.frame and significant-genes only data.frame
+pulsePAT_results <- gene_express(expressionObject = pulsepat_eset)
+```
+
+
+### Figure 2a. Heatmap of significant genes between 3 groups
+```{r heatmap, fig.height=15, fig.width=10}
+# Subset genes by custom significance and gather gene names
+pulsePAT_results_filtered = subset(pulsePAT_results$sig_results, 
+                                   PAT1_Control_padj < 0.05 | PAT3_Control_padj < 0.05) %>%
+  row.names()
+
+# Subset output expresion object by only the significant genes
+## make a matrix of values across all samples
+mat <- pulsePAT_results$sig_expression[pulsePAT_results_filtered] %>%
+  exprs()
+
+# Choose which column variables you want to annotate the columns by.
+annotation_col = data.frame(
+  Group = factor(pulsePAT_results$sig_expression$Group), 
+  row.names = colnames(pulsePAT_results$sig_expression)
+)
+
+# Specify colors you want to annotate the columns by.
+ann_colors = list(
+  Group = c(Control = "black", PAT3 = "deeppink", PAT1 = "green3")
+)
+
+# Plot heatmap with annotations
+pheatmap(mat = mat, 
+         color = colorRampPalette(c("#0000ff", "#000000", "#ffff00"))(n = 255), 
+         scale = "row", 
+         show_rownames = F,
+         annotation_col = annotation_col, 
+         annotation_colors = ann_colors,
+         fontsize = 6.5,
+         cellwidth = 8,
+         cellheight = 2.5,
+         show_colnames = F)
+```
+
+```{r}
+sessionInfo()
+```
+
