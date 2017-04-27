@@ -92,7 +92,7 @@ if(is.numeric(metadata[ ,opt$alpha]) == FALSE){
 # Use dplyr to collpase
 prism_ready <- metadata %>%
   group_by_(opt$group, opt$time) %>%
-  summarise_(mean = interp(~ mean(var), var = as.name(opt$alpha)),
+  summarise_(mean = interp(~ mean(var), var = as.name(opt$alpha)), sd = interp(~ sd(var), var = as.name(opt$alpha)),
              sem = interp(~ sd(var)/sqrt(length(var)), var = as.name(opt$alpha)),
              N = interp(~ n(), var = as.name(opt$alpha)))
 
