@@ -1,0 +1,2 @@
+# How to use
+This folder only contains the IgA concentrations used to plot Figure 4b. The plots were creating using PRISM 7. This folder is only meant to be a reference to the data and not a full reproduction of the plot.
