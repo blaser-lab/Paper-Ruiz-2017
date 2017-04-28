@@ -1,0 +1,75 @@
+---
+title: "TransferPAT-16S OTU"
+author: "Thomas W. Battaglia"
+output: 
+  pdf_document: 
+    highlight: tango
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+### Introduction
+This Notebook is meant to contain the 16S_OTU data found within the respective manuscript. It contains only the code used to generate the figures found within the main text. This entire dataset is publically available in QIITA under the ID [10527](https://qiita.ucsd.edu/study/description/10527). More details about the procedures used to generate the data can be found within the **Methods** section of the manuscript. The table found within the data folder has been processed to remove any OTU less than 0.01% relative abundance.
+
+
+#### 1a. Install and load the necessary libraries
+```{r library, message = FALSE, warnings = FALSE}
+source("scripts/estimate_pd.R")
+library(phyloseq)
+library(RColorBrewer)
+library(tidyverse)
+library(vegan)
+library(ape)
+library(picante)
+library(forcats)
+```
+
+
+#### 1b. Import the OTU table, map and OTU-representative tree
+```{r import}
+data <- import_biom(BIOMfilename = 'data/transfer_m0001.biom', 
+                    treefilename = 'data/rep_set.tre', 
+                    parseFunction = parse_taxonomy_greengenes)
+mapping = import_qiime_sample_data(mapfilename = 'data/transpat_mapping.txt')
+phylo <- merge_phyloseq(data, mapping)
+
+# Convert time to factor
+sample_data(phylo)$Days_post_transfer <- factor(sample_data(phylo)$Days_post_transfer, levels = c("In", "1", "6", "12", "20", "43", "64", "76", "CE", "CO", "IL"))
+```
+
+----
+
+#### Calculate Faith's Phylogenetic Diversity values for all samples
+```{r alpha}
+# use Picante to generate Faith PD values
+sample_data(phylo)$PD_tree = estimate_pd(phylo)$PD
+sample_data(phylo)$PD_sr = estimate_pd(phylo)$SR
+```
+
+#### Figure 3e. Faiths PD tree across time
+```{r}
+# Take the values from PD and plot over time
+sample_data(phylo) %>%
+  as("data.frame") %>%
+  ggplot(aes(x = Days_post_transfer, y = PD_tree, fill = Treatment)) +
+  geom_boxplot(outlier.colour = NA, 
+               alpha = 0.80, 
+               position = position_dodge(width = .9)) + 
+  theme_minimal(base_size = 15) +  
+  theme(panel.grid.major.x = element_line(colour = "grey", size = 0.55), 
+        legend.title = element_blank(), legend.position = c(0.89, 0.15),
+        legend.background = element_rect(size = 0.5, linetype= "solid", colour = "gray")) + 
+  xlab("Days post inoculation") + ylab("Phylogenetic Diversity") + 
+  guides(fill = guide_legend(title = "Treatment")) + 
+  scale_fill_manual(values = c("Control" = "#2980b9","PAT" = "firebrick2"))
+```
+
+
+```{r}
+sessionInfo()
+```
+
