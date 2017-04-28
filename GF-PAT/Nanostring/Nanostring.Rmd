@@ -1,0 +1,121 @@
+---
+title: "GF-PAT-Nanostring"
+author: "Thomas W. Battaglia"
+output:
+  pdf_document: default
+  html_document:
+    highlight: pygments
+    theme: journal
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+### 1. Introduction
+This is an Rmarkdown document which contains the R code for the Nanostring RNA-array analysis found within the manuscript "Ruiz et al. (2017)". Details about the tools and steps for processing the ileal transcriptome dataset can be found within the **'Methods'** section of the respective manuscript. The files used to generate this data set is hosted on GEO under the accession number [GSE98291](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE98291). This workflow will use a saved RDA file from the analysis instead of hosting the raw data.
+
+
+#### 1a. Install and load the necessary libraries
+```{r library, message = FALSE, warnings = FALSE}
+source("scripts/geneExpress.R")
+library(Biobase)
+library(DESeq)
+library(ggplot2)
+library(dplyr)
+library(RColorBrewer)
+library(stats)
+library(ggbiplot)
+library(pheatmap)
+library(org.Mm.eg.db)
+```
+
+
+#### 1b. Import the eSet object containing the counts and metadata
+```{r deseq}
+load("data/nanostring_eset.rda")
+```
+
+----
+
+### Compare Control-SPF vs. PAT-SPF vs. Control-GF vs. PAT-GF at day 52 of life
+```{r stats}
+# Run significance testing function
+## Output is an ExpressionSet, data.frame and significant-genes only data.frame
+gfPAT_results <- gene_express(expressionObject = gfpat_eset)
+```
+
+
+### Figure 3g. Heatmap of significant genes between 3 groups
+```{r heatmap, fig.height=15, fig.width=10}
+# Subset genes by custom significance and gather gene names
+gf_results_filtered = subset(gfPAT_results$sig_results, PATSPF_ControlSPF_padj < 0.05 | ControlSPF_ControlGF_padj < 0.05) %>%
+  row.names()
+
+# Subset output expresion object by only the significant genes
+## make a matrix of values across all samples
+mat <- gfPAT_results$sig_expression[gf_results_filtered] %>%
+  exprs()
+
+# Choose which column variables you want to annotate the columns by.
+annotation_col = data.frame(
+  Group = factor(gfPAT_results$sig_expression$Group), 
+  row.names = colnames(gfPAT_results$sig_expression)
+)
+
+# Specify colors you want to annotate the columns by.
+ann_colors = list(
+  Group = c(ControlSPF = "black", 
+            PATSPF = "red", 
+            ControlGF = "orange", 
+            PATGF = "grey"))
+
+# Plot heatmap with annotations
+pheatmap(mat = mat, 
+         color = colorRampPalette(c("#0000ff", "#000000", "#ffff00"))(n = 100), 
+         scale = "row", 
+         show_rownames = F,
+         annotation_col = annotation_col, 
+         annotation_colors = ann_colors, 
+         #filename = "Figure3g.pdf",
+         fontsize = 6.5,
+         cellwidth = 20,
+         show_colnames = F)
+```
+
+
+### Figure 3f. PCoA Biplot for all 3 groups
+```{r biplot, fig.height=15, fig.width=10}
+# Generate Principal Components Analysis data for normalized-log2 values
+pca <- gfPAT_results$sig_expression %>%
+  exprs() %>%
+  t() %>%
+  prcomp(scale. = T)
+
+# Use ggbiplot to create a biplot
+ggbiplot(pca, 
+         obs.scale = 1, 
+         var.scale = 1, 
+         groups = as.vector(gfPAT_results$sig_expression$Group), 
+         ellipse = TRUE, 
+         circle = TRUE, 
+         var.axes = F) +
+  scale_color_manual(breaks = c("ControlSPF", "PATSPF", "ControlGF", "PATGF"), 
+                     labels = c("SPF:Control", "SPF:PAT", "GF:Control", "GF:PAT"),
+                     values = c("ControlSPF" = "darkblue", 
+                                "PATSPF" = "red", 
+                                "ControlGF" = "grey", 
+                                "PATGF" = "orange")) + 
+  theme_bw(base_size = 17) +
+  geom_point(aes(color = factor(gfPAT_results$sig_expression$Group)), size = 4, alpha = 0.65) +
+  theme(legend.title = element_blank(), legend.position = c(0.89, 0.15),
+        legend.background = element_rect(size = 0.5, linetype= "solid", colour = "gray"))
+```
+
+
+
+```{r}
+sessionInfo()
+```
+
