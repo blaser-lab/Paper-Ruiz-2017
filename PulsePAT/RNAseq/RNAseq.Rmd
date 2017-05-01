@@ -15,9 +15,6 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(cache = TRUE)
 
-# For RNAseq-related data
-#library(checkpoint)
-#checkpoint("2017-04-01", checkpointLocation = tempdir())
 library(DESeq2)
 library(ggplot2)
 library(ggthemes)

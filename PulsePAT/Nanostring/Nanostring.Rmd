@@ -2,10 +2,9 @@
 title: "PulsePAT-Nanostring"
 author: "Thomas W. Battaglia"
 output:
-  pdf_document: default
-  html_document:
-    highlight: pygments
-    theme: journal
+   pdf_document: 
+    highlight: tango
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
