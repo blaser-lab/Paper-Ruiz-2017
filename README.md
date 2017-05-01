@@ -13,9 +13,9 @@ The data is structured according the experiment. Within the each experiment fold
 
 | Experiment 	| Description                                                                    	|
 |:----------:	|--------------------------------------------------------------------------------	|
-| PulsePAT   	| Tylosin exposures of 1 or 3 pulses in early life C57BL/6 wild-type mice.       	|
-| TransPAT   	| Transfer of tylosin-perturbed cecal contents in early life C57BL/6 wild-type mice |
-| GF-PAT     	| A single tylosin exposure from day 5-10 of life in C57BL/6 germ-free or SPF mice. 	|
+| PulsePAT   	| The effect of a single or multiple pulsed antibiotic exposure in C57BL/6 mice.      	|
+| TransPAT   	| Transfer of tylosin-perturbed cecal contents in early life C57BL/6 wild-type mice. |
+| GF-PAT     	| The effect of early life antibiotic treatment in germ-free or SPF colonized C57BL/6 mice. 	|
 
 ```
 ── Paper-Ruiz-2017/
@@ -26,10 +26,14 @@ The data is structured according the experiment. Within the each experiment fold
 │     └── Nanostring/
 │
 │   └── TransPAT/
-│     └── Temporary/holder/
+│     └── 16S_OTU/
+│     └── IgA_concentration/
 │
 │   └── GF-PAT/
-│     └── Temporary/holder/
+│     └── 16S_OTU/
+│     └── IgA_concentration/
+│     └── Physiology/
+│     └── Nanostring/
 
 ```
 
@@ -42,28 +46,21 @@ The data is structured according the experiment. Within the each experiment fold
 | Figure-1d     	| PulsePAT/16S_OTU/ 	|
 | Figure-1e     	| PulsePAT/16S_OTU/ 	|
 |---------------	|--------------------------------------------------------------------------------	|
-| Figure-2a     	| PulsePAT/Nanostring 	|
+| Figure-2a     	| PulsePAT/Nanostring/ 	|
 | Figure-2d     	| PulsePAT/IgA_concentration/ 	|
 | Figure-2e     	| PulsePAT/IgA_concentration/ 	|
 | Figure-2f     	| PulsePAT/RNAseq/ 	|
 | Figure-2g     	| PulsePAT/RNAseq/  	|
 |---------------	|--------------------------------------------------------------------------------	|
-| Figure-3a     	| Temporary/holder 	|
-| Figure-3b     	| Temporary/holder 	|
-| Figure-3c     	| Temporary/holder 	|
-| Figure-3d     	| Temporary/holder 	|
-| Figure-3e     	| Temporary/holder 	|
-| Figure-3f     	| Temporary/holder 	|
-| Figure-3g     	| Temporary/holder 	|
-| Figure-3h     	| Temporary/holder 	|
+| Figure-3b     	| GF-PAT/16S_OTU 	|
+| Figure-3c     	| GF-PAT/16S_OTU 	|
+| Figure-3d     	| GF-PAT/Physiology 	|
+| Figure-3e     	| GF-PAT/IgA_concentration/  	|
+| Figure-3f     	| GF-PAT/Nanostring/ 	|
+| Figure-3g     	| GF-PAT/Nanostring/ 	|
 |---------------	|--------------------------------------------------------------------------------	|
-| Figure-4a     	| Temporary/holder 	|
-| Figure-4b     	| Temporary/holder	|
-| Figure-4c     	| Temporary/holder 	|
-| Figure-4d     	| Temporary/holder 	|
-| Figure-4e     	| Temporary/holder	|
-| Figure-4f     	| Temporary/holder 	|
-| Figure-4g     	| Temporary/holder 	|
-| Figure-3h     	| Temporary/holder 	|
-
+| Figure-4b     	| TransPAT/IgA_concentration/	|
+| Figure-4d     	| TransPAT/16S_OTU/	|
+| Figure-4e     	| TransPAT/16S_OTU/	|
+| Figure-4f     	| TransPAT/16S_OTU/ |
 
