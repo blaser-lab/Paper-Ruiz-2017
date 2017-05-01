@@ -1,6 +1,6 @@
 ---
 title: "PulsePAT-RNAseq"
-author: "Victoria Ruiz & Thomas W. Battaglia"
+author: "Thomas W. Battaglia"
 output:
   pdf_document: 
     highlight: tango
@@ -14,7 +14,6 @@ output:
 ```{r setup, include = F}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(cache = TRUE)
-
 library(DESeq2)
 library(ggplot2)
 library(ggthemes)
@@ -255,7 +254,9 @@ dams_vol
 ```{r volcano_multiplot, fig.height=5, fig.width=11, dpi=150}
 # Use both volcano plots to create a new single side-by-side figure
 ## using the package Rmisc
+#png("Figure2f.png", width = 900, height = 600)
 Rmisc::multiplot(pups_vol, dams_vol, cols = 2)
+#dev.off()
 ```
 
 
@@ -284,13 +285,12 @@ gene_barplot %>%
   ggplot(aes(x = Group, y = Number, group = "black")) +
   geom_col() +
   facet_grid(.~ Direction, switch = "y") +
-  theme_minimal(base_size = 16) +
+  theme_minimal(base_size = 14) +
   xlab("") + ylab("Number of genes") +
   geom_text(aes(x = Group, y = Number, label = Number), size = 5, vjust = -0.5) +
-  scale_y_continuous(limits = c(0, 800))
+  scale_y_continuous(limits = c(0, 800)) +
+  ggsave('Figure2g.pdf')
 ```
-
-
 
 
 ```{r session_info}
