@@ -34,7 +34,6 @@ The data is structured according the experiment. Within the each experiment fold
 │     └── IgA_concentration/
 │     └── Physiology/
 │     └── Nanostring/
-
 ```
 
 
@@ -52,9 +51,9 @@ The data is structured according the experiment. Within the each experiment fold
 | Figure-2f     	| PulsePAT/RNAseq/ 	|
 | Figure-2g     	| PulsePAT/RNAseq/  	|
 |---------------	|--------------------------------------------------------------------------------	|
-| Figure-3b     	| GF-PAT/16S_OTU 	|
-| Figure-3c     	| GF-PAT/16S_OTU 	|
-| Figure-3d     	| GF-PAT/Physiology 	|
+| Figure-3b     	| GF-PAT/16S_OTU/ 	|
+| Figure-3c     	| GF-PAT/16S_OTU/ 	|
+| Figure-3d     	| GF-PAT/Physiology/ 	|
 | Figure-3e     	| GF-PAT/IgA_concentration/  	|
 | Figure-3f     	| GF-PAT/Nanostring/ 	|
 | Figure-3g     	| GF-PAT/Nanostring/ 	|
@@ -63,4 +62,3 @@ The data is structured according the experiment. Within the each experiment fold
 | Figure-4d     	| TransPAT/16S_OTU/	|
 | Figure-4e     	| TransPAT/16S_OTU/	|
 | Figure-4f     	| TransPAT/16S_OTU/ |
-
