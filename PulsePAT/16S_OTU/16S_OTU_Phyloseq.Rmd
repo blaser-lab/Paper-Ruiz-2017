@@ -1,0 +1,212 @@
+---
+title: "PulsePAT-16S OTU"
+author: "Thomas W. Battaglia"
+output: 
+  pdf_document: 
+    highlight: tango
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+### Introduction
+This Notebook is meant to contain the 16S_OTU data found within the respective manuscript. It contains only the code used to generate the figures found within the main text. This entire dataset is publically available in QIITA under the ID [10527](https://qiita.ucsd.edu/study/description/10527). More details about the procedures used to generate the data can be found within the **Methods** section of the manuscript. The table found within the data folder has been processed to remove any OTU less than 0.01% relative abundance.
+
+
+#### 1a. Install and load the necessary libraries
+```{r library, message = FALSE, warnings = FALSE}
+source("scripts/estimate_pd.R")
+source("scripts/intergroup_dist.R")
+library(phyloseq)
+library(RColorBrewer)
+library(tidyverse)
+library(vegan)
+library(ape)
+library(picante)
+library(forcats)
+```
+
+
+#### 1b. Import the OTU table, map and OTU-representative tree
+```{r import}
+data <- import_biom(BIOMfilename = 'data/pulsePAT_m0001.biom', 
+                    treefilename = 'data/rep_set.tre', 
+                    parseFunction = parse_taxonomy_greengenes)
+mapping = import_qiime_sample_data(mapfilename = 'data/pulsePAT_mapping.txt')
+phylo <- merge_phyloseq(data, mapping)
+
+# Convert time to factor
+sample_data(phylo)$Day_of_life <- factor(sample_data(phylo)$Day_of_life)
+```
+
+----
+
+#### Calculate Bdiv pairwise comparisons (Figure 1d)
+```{r bdiv}
+# Calculate bdiv intra group distances for pups
+## Use function within Rscript
+pups = phylo %>%
+  subset_samples(Breeder_Pup == "pup") %>%
+  subset_samples(Type_of_sample == "Fecal") %>%
+  intergroup_div(class = "Treatment", timepoint = "Day_of_life", metric = "unifrac", ntimes = 999)
+
+# Modify to calculate Mean/SEM means
+pups_means = pups %>%
+  mutate(MouseType = "Pups") %>%
+  mutate(MouseType = factor(MouseType)) %>%
+  filter(Comparison %in% c("ControlvsPAT1", "PAT3vsControl", "PAT1vsPAT3")) %>%
+  mutate(Comparison = gsub("PAT3vsControl","ControlvsPAT3", Comparison, fixed = T)) %>%
+  group_by(Comparison, timepoint, MouseType) %>%
+  summarise(Mean_o_Mean = mean(Mean),
+            sem_o_sem = mean(SEM)) %>%
+  ungroup()
+
+# Calculate bdiv intra group distances for pups
+## Use function within Rscript
+dams = phylo %>%
+  subset_samples(Breeder_Pup == "Breeder") %>%
+  subset_samples(Type_of_sample == "Fecal") %>%
+  intergroup_div(class = "Treatment", timepoint = "Day_of_life", metric = "unifrac", ntimes = 999)
+
+# Modify to calculate Mean/SEM means
+dams_means = dams %>%
+  mutate(MouseType = "Dams") %>%
+  mutate(MouseType = factor(MouseType)) %>%
+  filter(Comparison %in% c("ControlvsPAT")) %>%
+  group_by(Comparison, timepoint, MouseType) %>%
+  summarise(Mean_o_Mean = mean(Mean),
+            sem_o_sem = mean(SEM)) %>%
+  ungroup()
+
+# Find uneven factors
+pups_means$timepoint = as.character(pups_means$timepoint)
+dams_means$timepoint = as.character(dams_means$timepoint)
+pups_means$Comparison = as.character(pups_means$Comparison)
+dams_means$Comparison = as.character(dams_means$Comparison)
+pups_means$MouseType = as.character(pups_means$MouseType)
+dams_means$MouseType = as.character(dams_means$MouseType)
+
+# Combine two results
+merged = bind_rows(pups_means, dams_means)
+
+# Plot results over time
+merged %>%
+  mutate(Comparison = factor(Comparison),
+         MouseType = factor(MouseType)) %>%
+  mutate(timepoint = factor(timepoint, levels = c(5, 10, 12, 21, 22, 30, 34, 39, 43, 52))) %>%
+  filter(timepoint %in% c(5, 10, 22, 30, 34, 39, 43, 52)) %>%
+  filter(Comparison != "PAT1vsPAT3") %>%
+  mutate(Comparison = gsub("vs", " vs ", Comparison, fixed = T)) %>%
+  ggplot(aes(x = timepoint, y = Mean_o_Mean, group = Comparison, color = Comparison)) +
+  geom_line(size = 1.20) +
+  geom_point() +
+  geom_errorbar(aes(ymin = Mean_o_Mean - sem_o_sem, ymax = Mean_o_Mean + sem_o_sem), width = 0.25) +
+  annotate("rect", xmin = 1, xmax = 2, ymin = -Inf, 
+           ymax = Inf, alpha = 0.2, fill = "darkgray", 
+           color = "black", linetype = "dotted") +
+  theme_bw(base_size = 15) +
+  scale_color_manual(values = c("Control vs PAT1" = "#1E824C",
+                                "Control vs PAT3" = "#ff0099",
+                                "Control vs PAT" = "orange"), 
+                     labels = c("Control vs PAT1" = "Control vs PAT1 (Pups)",
+                                "Control vs PAT3" = "Control vs PAT3 (Pups)",
+                                "Control vs PAT" = "Control vs PAT1 (Dams)")) +
+  xlab("Day of life (pups)") +
+  theme(legend.title = element_blank(), 
+        legend.position = c(0.80, 0.15),
+        legend.text = element_text(size = 16),
+        legend.background = element_rect(size = 0.55, linetype = "solid", colour = "gray")) +
+  ylab("Mean Pairwise Unweighted \nUniFrac Distances (Inter-group)") +
+  ggsave('Figure1d.pdf')
+```
+
+----
+
+#### Calculate Bdiv pairwise comparisons (Figure S1-b)
+```{r figuresS1_b}
+# Calculate bdiv intra group distances for pups
+## Use function within Rscript
+pups_all = phylo %>%
+  subset_samples(Breeder_Pup == "pup") %>%
+  subset_samples(Type_of_sample == "Fecal") %>%
+  intergroup_div(class = "Treatment", timepoint = "Day_of_life", metric = "unifrac", ntimes = 9) %>%
+  mutate(MouseType = "Pups") %>%
+  group_by(Comparison, timepoint, MouseType) %>%
+  summarise(Mean_o_Mean = mean(Mean),
+            sem_o_sem = mean(SEM)) %>%
+  ungroup() %>%
+  mutate(timepoint = as.character(timepoint)) %>%
+  mutate(Comparison = as.character(Comparison)) 
+
+# Calculate bdiv intra group distances for dams
+## Use function within Rscript
+dams_all = phylo %>%
+  subset_samples(Breeder_Pup == "Breeder") %>%
+  subset_samples(Type_of_sample == "Fecal") %>%
+  intergroup_div(class = "Treatment", timepoint = "Day_of_life", metric = "unifrac", ntimes = 9) %>%
+  mutate(MouseType = "Dams") %>%
+  mutate(Comparison = gsub("ControlvsControl", "ControlvsControl_D", Comparison, fixed = T)) %>%
+  group_by(Comparison, timepoint, MouseType) %>%
+  summarise(Mean_o_Mean = mean(Mean),
+            sem_o_sem = mean(SEM)) %>%
+  ungroup() %>%
+  mutate(timepoint = as.character(timepoint)) %>%
+  mutate(Comparison = as.character(Comparison)) 
+
+# Merge tables together
+merged_all = bind_rows(pups_all, dams_all)
+
+# Plot multi-dimensional barplot
+merged_all %>%
+  filter(Comparison != "PAT1vsPAT3") %>%
+  mutate(Comparison = factor(Comparison)) %>%
+  mutate(MouseType = factor(MouseType)) %>%
+  filter(timepoint %in% c(5, 10, 22, 39, 43, 52)) %>%
+  mutate(timepoint = factor(timepoint, levels = c(5, 10, 22, 39, 43, 52))) %>%
+  mutate(Com_labels = case_when(.$Comparison == "PAT3vsPAT3" ~ "P3 vs P3",
+                                .$Comparison == "PAT3vsControl" ~ "C vs P3",
+                                .$Comparison == "ControlvsControl" ~ "C vs C",
+                                .$Comparison == "ControlvsPAT1" ~ "C vs P1",
+                                .$Comparison == "PAT1vsPAT1" ~ "P1 vs P1",
+                                .$Comparison == "PATvsPAT" ~ "P vs P",
+                                .$Comparison == "ControlvsPAT" ~ "C vs P",
+                                .$Comparison == "ControlvsControl_D" ~ "C vs CD")) %>%
+   mutate(Com_labels = factor(Com_labels, levels = c("P3 vs P3", "C vs P3", "C vs C", "C vs P1", "P1 vs P1", 
+                                                   "P vs P", "C vs P", "C vs CD"))) %>%
+  ggplot(aes(x = Com_labels, y = Mean_o_Mean, fill = Com_labels, color = Com_labels)) +
+  geom_bar(stat = "identity", size = 0.70) +
+  coord_flip() +
+  facet_wrap(~ timepoint, ncol = 2, scale = "free_y") + 
+  xlab("") + ylab("Mean unweighted UniFrac distances") +
+  theme_bw(base_size = 14) +
+  geom_errorbar(aes(ymin = Mean_o_Mean, ymax = Mean_o_Mean + sem_o_sem)) +
+  scale_fill_manual(name = "",
+                    values = c("P3 vs P3" = "#DA3C78", 
+                               "C vs P3" = "#DA3C78", 
+                               "C vs C" = "#7f8c8d",
+                               "C vs P1" = "#26A65B",
+                               "P1 vs P1" = "#26A65B",
+                               "P vs P" = "#F1892D",
+                               "C vs P" = "#F1892D",
+                               "C vs CD" = "#7f8c8d")) +
+  scale_color_manual(name = "",
+                     values = c("P3 vs P3" = "#DA3C78", 
+                               "C vs P3" = "black", 
+                               "C vs C" = "#7f8c8d",
+                               "C vs P1" = "black",
+                               "P1 vs P1" = "#26A65B",
+                               "P vs P" = "#F1892D",
+                               "C vs P" = "black",
+                               "C vs CD" = "#7f8c8d")) +
+  ggsave("FigureS1-b.pdf", width = 9, height = 11)
+```
+
+
+
+
+```{r}
+sessionInfo()
+```

@@ -292,6 +292,31 @@ gene_barplot %>%
   ggsave('Figure2g.pdf')
 ```
 
+### Section 4: Compare genes from Pups and Dams
+Calculate the number of genes shared and unique to the pup's and dam's analysis. Each comparison is PAT/Control so genes considered **increased** are increased in PAT compared to control and genes considered **decreased** are decreased in PAT compared to control.
+```{r venn}
+# Gather the gene names increased in Pups
+pups_up = subset(ddPups_res_sig_filter, log2FoldChange > 0, select = 'symbol') %>% as.data.frame()
+
+# Gather the gene names decreased in Pups
+pups_down = subset(ddPups_res_sig_filter, log2FoldChange < 0, select = 'symbol') %>% as.data.frame()
+
+# Gather the gene names increased in Dams
+dams_up = subset(ddDams_res_sig_filter, log2FoldChange > 0, select = 'symbol') %>% as.data.frame()
+
+# Gather the gene names decreased in Dams
+dams_down = subset(ddDams_res_sig_filter, log2FoldChange < 0, select = 'symbol') %>% as.data.frame()
+
+# Get number of genes shared up
+# 35
+intersect(pups_up, dams_up) %>% nrow()
+
+# Get number of genes shared down
+# 12
+intersect(pups_down, dams_down) %>% nrow()
+```
+
+
 
 ```{r session_info}
 sessionInfo()

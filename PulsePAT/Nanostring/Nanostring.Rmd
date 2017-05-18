@@ -22,13 +22,14 @@ source("scripts/geneExpress.R")
 library(Biobase)
 library(DESeq)
 library(ggplot2)
-library(dplyr)
+library(tidyverse)
 library(RColorBrewer)
 library(stats)
 library(ggplot2)
 library(pheatmap)
 library(RColorBrewer)
 library(org.Mm.eg.db)
+library(annotables)
 ```
 
 
@@ -44,19 +45,38 @@ load("data/nanostring_eset.rda")
 # Run significance testing function
 ## Output is an ExpressionSet, data.frame and significant-genes only data.frame
 pulsePAT_results <- gene_express(expressionObject = pulsepat_eset)
-```
 
+# Add genes as a rowname
+pulsePAT_results$sig_results$gene_name = row.names(pulsePAT_results$sig_results)
+
+# Subset genes by custom significance and gather gene names
+pulsePAT_results_p1_p3 = subset(pulsePAT_results$sig_results, 
+                                PAT1_Control_padj < 0.05 | PAT3_Control_padj < 0.05)
+
+# Get the number of significant genes in both P1 + P3
+nrow(pulsePAT_results_p1_p3)
+
+# Get the number of genes significant in P1
+pulsePAT_results_p1 = subset(pulsePAT_results$sig_results, PAT1_Control_padj < 0.05)
+
+# Get the number of genes significant in P3
+pulsePAT_results_p3 = subset(pulsePAT_results$sig_results, PAT3_Control_padj < 0.05)
+
+# Find overlapping genes
+dplyr::intersect(pulsePAT_results_p1$gene_name, pulsePAT_results_p3$gene_name) %>% length()
+
+# Find P1-unique
+dplyr::setdiff(pulsePAT_results_p1$gene_name, pulsePAT_results_p3$gene_name) %>% length()
+
+# Find P3-unique
+dplyr::setdiff(pulsePAT_results_p3$gene_name, pulsePAT_results_p1$gene_name) %>% length()
+```
 
 ### Figure 2a. Heatmap of significant genes between 3 groups
 ```{r heatmap, fig.height=15, fig.width=10}
-# Subset genes by custom significance and gather gene names
-pulsePAT_results_filtered = subset(pulsePAT_results$sig_results, 
-                                   PAT1_Control_padj < 0.05 | PAT3_Control_padj < 0.05) %>%
-  row.names()
-
 # Subset output expresion object by only the significant genes
 ## make a matrix of values across all samples
-mat <- pulsePAT_results$sig_expression[pulsePAT_results_filtered] %>%
+mat <- pulsePAT_results$sig_expression[row.names(pulsePAT_results_p1_p3)] %>%
   exprs()
 
 # Choose which column variables you want to annotate the columns by.
@@ -67,7 +87,7 @@ annotation_col = data.frame(
 
 # Specify colors you want to annotate the columns by.
 ann_colors = list(
-  Group = c(Control = "black", PAT3 = "deeppink", PAT1 = "green3")
+  Group = c(Control = "black", PAT1 = "#1E824C", PAT3 = "#ff0099")
 )
 
 # Plot heatmap with annotations
@@ -78,11 +98,29 @@ pheatmap(mat = mat,
          annotation_col = annotation_col, 
          annotation_colors = ann_colors,
          fontsize = 6.5, 
+         border_color = NA,
+         treeheight_row = 20,
+         treeheight_col = 20,
          filename = "Figure2a.pdf",
          cellwidth = 8,
          cellheight = 2.5,
          show_colnames = F)
 ```
+
+### Figure S3. Table of significant genes between 
+```{r s6_table}
+# Generate a .csv file for the significant genes
+table_s3 = pulsePAT_results_p1_p3 %>%
+  rownames_to_column(var = "geneid")
+
+# Add genes names to the table
+table_s3 = table_s3 %>%
+  inner_join(grcm38, by = c("geneid" = "symbol"))
+
+# Write file to disk  
+write.csv(table_s3, "TableS3.csv", quote = F, row.names = F)
+```
+
 
 ```{r}
 sessionInfo()

@@ -23,12 +23,13 @@ source("scripts/geneExpress.R")
 library(Biobase)
 library(DESeq)
 library(ggplot2)
-library(dplyr)
+library(tidyverse)
 library(RColorBrewer)
 library(stats)
 library(ggbiplot)
 library(pheatmap)
 library(org.Mm.eg.db)
+library(annotables)
 ```
 
 
@@ -44,41 +45,60 @@ load("data/nanostring_eset.rda")
 # Run significance testing function
 ## Output is an ExpressionSet, data.frame and significant-genes only data.frame
 gfPAT_results <- gene_express(expressionObject = gfpat_eset)
+
+# Subset genes by custom significance and gather gene names
+gf_results_filtered = subset(gfPAT_results$sig_results, 
+                             PATSPF_ControlSPF_padj < 0.05 | ControlSPF_ControlGF_padj < 0.05) 
+
+# Get the number of significant genes in both P1 + P3
+nrow(gf_results_filtered)
+
+# Get the number of genes significant
+gfPAT_results_spf_trt = subset(gfPAT_results$sig_results, PATSPF_ControlSPF_padj < 0.05)
+
+# Get the number of genes significant
+gfPAT_results_ctl = subset(gfPAT_results$sig_results, ControlSPF_ControlGF_padj < 0.05)
+
+# Get the number of genes significant
+gfPAT_results_gf = subset(gfPAT_results$sig_results, PATGF_ControlGF_padj < 0.05)
 ```
 
 
 ### Figure 3g. Heatmap of significant genes between 3 groups
-```{r heatmap, fig.height=15, fig.width=10}
-# Subset genes by custom significance and gather gene names
-gf_results_filtered = subset(gfPAT_results$sig_results, PATSPF_ControlSPF_padj < 0.05 | ControlSPF_ControlGF_padj < 0.05) %>%
-  row.names()
-
+```{r heatmap, fig.height=10, fig.width=10}
 # Subset output expresion object by only the significant genes
 ## make a matrix of values across all samples
-mat <- gfPAT_results$sig_expression[gf_results_filtered] %>%
+mat <- gfPAT_results$sig_expression[row.names(gf_results_filtered)] %>%
   exprs()
+
+# Make consistent grouping names across figures
+Groups <- factor(gfPAT_results$sig_expression$Group, 
+                 labels = c("GF: Control", "SPF: Control","GF: PAT", "SPF: PAT"))
 
 # Choose which column variables you want to annotate the columns by.
 annotation_col = data.frame(
-  Group = factor(gfPAT_results$sig_expression$Group), 
+  Group = Groups, 
   row.names = colnames(gfPAT_results$sig_expression)
 )
 
 # Specify colors you want to annotate the columns by.
 ann_colors = list(
-  Group = c(ControlSPF = "black", 
-            PATSPF = "red", 
-            ControlGF = "orange", 
-            PATGF = "grey"))
+  Group = c("SPF: Control" = "darkblue", 
+            "SPF: PAT" = "red", 
+            "GF: Control" = "gray", 
+            "GF: PAT" = "orange"))
 
-# Plot heatmap with annotations
+# Plot heatmap with annotations (Figure 3g)
 pheatmap(mat = mat, 
          color = colorRampPalette(c("#0000ff", "#000000", "#ffff00"))(n = 100), 
          scale = "row", 
          show_rownames = F,
          annotation_col = annotation_col, 
          annotation_colors = ann_colors, 
-         #filename = "Figure3g.pdf",
+         filename = "Figure3g.pdf", 
+         border_color = NA,
+         treeheight_row = 20,
+         treeheight_col = 20,
          fontsize = 6.5,
          cellwidth = 20,
          show_colnames = F)
@@ -102,16 +122,35 @@ ggbiplot(pca,
          circle = TRUE, 
          var.axes = F) +
   scale_color_manual(breaks = c("ControlSPF", "PATSPF", "ControlGF", "PATGF"), 
-                     labels = c("SPF:Control", "SPF:PAT", "GF:Control", "GF:PAT"),
+                     labels = c("SPF: Control", "SPF: PAT", "GF: Control", "GF: PAT"),
                      values = c("ControlSPF" = "darkblue", 
                                 "PATSPF" = "red", 
                                 "ControlGF" = "grey", 
                                 "PATGF" = "orange")) + 
   theme_bw(base_size = 17) +
   geom_point(aes(color = factor(gfPAT_results$sig_expression$Group)), size = 4, alpha = 0.65) +
-  theme(legend.title = element_blank(), legend.position = c(0.89, 0.15),
-        legend.background = element_rect(size = 0.5, linetype= "solid", colour = "gray"))
+  theme(legend.title = element_blank(), legend.position = c(0.89, 0.16),
+        legend.background = element_rect(size = 0.5, linetype= "solid", colour = "gray")) +
+  ggsave("Figure3f.pdf", width = 10, height = 8)
 ```
+
+
+### Figure S6. Table of significant genes between GF-PAT vs. GF-Control
+```{r s6_table}
+# Generate a .csv file for the significant genes
+table_s6 = subset(gfPAT_results$sig_results, 
+                  PATSPF_ControlSPF_padj < 0.05 | ControlSPF_ControlGF_padj < 0.05 | PATGF_ControlGF_padj < 0.05) %>%
+  rownames_to_column(var = "geneid")
+
+# Add genes names to the table
+table_s6 = table_s6 %>%
+  inner_join(grcm38, by = c("geneid" = "symbol"))
+
+# Write file to disk  
+write.csv(table_s6, "TableS6.csv", quote = F, row.names = F)
+```
+
+
 
 
 ```{r}

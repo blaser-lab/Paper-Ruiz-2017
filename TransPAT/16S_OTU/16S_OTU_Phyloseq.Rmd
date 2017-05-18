@@ -44,33 +44,58 @@ sample_data(phylo)$Days_post_transfer <- factor(x = sample_data(phylo)$Days_post
 
 ----
 
-#### Calculate Faith's Phylogenetic Diversity values for all samples
+#### Add Alpha diversity metrics to sample metadata
 ```{r alpha}
 # use Picante to generate Faith PD values
 sample_data(phylo)$PD_tree = estimate_pd(phylo)$PD
 sample_data(phylo)$PD_sr = estimate_pd(phylo)$SR
+
+# Add shanno-index values
+sample_data(phylo)$shannon = estimate_richness(phylo, measures = "Shannon")
 ```
 
 #### Figure 3e. Faiths PD tree across time
-```{r}
+```{r pdtree}
 # Take the values from PD and plot over time
 sample_data(phylo) %>%
   as("data.frame") %>%
   ggplot(aes(x = Days_post_transfer, y = PD_tree, fill = Treatment)) +
   geom_boxplot(outlier.colour = NA, 
                alpha = 0.80, 
-               position = position_dodge(width = .9)) + 
+               position = position_dodge(width = 0.9)) + 
   theme_minimal(base_size = 15) +  
   theme(panel.grid.major.x = element_line(colour = "grey", size = 0.55), 
-        legend.title = element_blank(), legend.position = c(0.89, 0.15),
+        legend.title = element_blank(), 
+        legend.position = c(0.89, 0.15),
         legend.background = element_rect(size = 0.5, linetype= "solid", colour = "gray")) + 
-  xlab("Days post inoculation") + ylab("Phylogenetic Diversity") + 
+  xlab("Days post-gavage") + ylab("Phylogenetic Diversity") + 
   guides(fill = guide_legend(title = "Treatment")) + 
-  scale_fill_manual(values = c("Control" = "#2980b9","PAT" = "firebrick2"))
+  scale_fill_manual(values = c("Control" = "#2980b9","PAT" = "firebrick2")) +
+  ggsave("Figure4e.pdf")
+```
+
+
+#### Figure S2-c. Shanno Index, over time
+```{r shannon}
+# Take the values from shannon and plot over time
+sample_data(phylo) %>%
+  as("data.frame") %>%
+  ggplot(aes(x = Days_post_transfer, y = shannon, fill = Treatment)) +
+  geom_boxplot(outlier.colour = NA, 
+               alpha = 0.80, 
+               position = position_dodge(width = 0.9)) + 
+  theme_minimal(base_size = 15) +  
+  theme(panel.grid.major.x = element_line(colour = "grey", size = 0.55), 
+        legend.title = element_blank(), 
+        legend.position = c(0.89, 0.15),
+        legend.background = element_rect(size = 0.5, linetype= "solid", colour = "gray")) + 
+  xlab("Days post-gavage") + ylab("Shannon evenness") + 
+  guides(fill = guide_legend(title = "Treatment")) + 
+  scale_fill_manual(values = c("Control" = "#2980b9","PAT" = "firebrick2")) +
+  ggsave("FigureS2-c.pdf")
 ```
 
 
 ```{r}
 sessionInfo()
 ```
-
