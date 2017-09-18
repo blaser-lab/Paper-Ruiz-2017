@@ -1,9 +1,9 @@
 # Paper-Ruiz-2017  
-Source code from Ruiz et al., (2017) NCOMMS-17-03244.
+Source code from:  
+Ruiz VE, Battaglia T, Kurtz ZD, et al. A single early-in-life macrolide course has lasting effects on murine microbial network topology and immunity. **Nature Communications**. 2017;8:518. doi:10.1038/s41467-017-00531-6.
 
 ### Abstract
-Broad-spectrum antibiotics are frequently prescribed to children. The period of early-childhood represents a time where the developing microbiota may be more sensitive to environmental perturbations, which thus might have long-lasting host consequences. We hypothesized that even a single early-life broad-spectrum antibiotic course at a therapeutic dose (PAT) leads to durable alterations in both the gut microbiota and host immunity. In C57BL/6 mice, a single early-life tylosin (macrolide) course markedly altered the intestinal microbiome, and affected specific intestinal T-cell populations and secretory IgA expression, but PAT-exposed adult dams had minimal immunologic alterations. No immunological effects were detected in PAT-exposed germ-free animals; indicating that observed activities are microbiota dependent. Transfer of PAT-perturbed microbiota led to delayed sIgA expression indicating that the altered microbiota is sufficient to transfer PAT-induced effects. PAT exposure had lasting and transferable effects on microbial community network topology. Together these results indicate the impact of a single therapeutic early-life antibiotic course altering the microbiota and modulating host immune phenotypes that persist long after exposure has ceased.
-
+Broad-spectrum antibiotics are frequently prescribed to children. Early childhood represents a dynamic period for the intestinal microbial ecosystem, which is readily shaped by environmental cues; antibiotic-induced disruption of this sensitive community may have long-lasting host consequences. Here we demonstrate that a single pulsed macrolide antibiotic treatment (PAT) course early in life is sufficient to lead to durable alterations to the murine intestinal microbiota, ileal gene expression, specific intestinal T-cell populations, and secretory IgA expression. A PAT-perturbed microbial community is necessary for host effects and sufficient to transfer delayed secretory IgA expression. Additionally, early-life antibiotic exposure has lasting and transferable effects on microbial community network topology. Our results indicate that a single early-life macrolide course can alter the microbiota and modulate host immune phenotypes that persist long after exposure has ceased.
 
 ### Description
 This repository is set up to reproduce the figures and analyses within the publication, **Ruiz et al**. It contains the necessary scripts and code usd to analyze the multi-omics datasets generated. It does not contain the raw sequencing data nor the scripts to process the data, but this information can be found with the **Data Availability** section within the publication. In addition, most to all of the figures were generated individually and then placed into a single figure, which is not included in this repository.
@@ -16,6 +16,7 @@ The data is structured according the experiment. Within the each experiment fold
 | PulsePAT   	| The effect of a single or multiple pulsed antibiotic exposure in C57BL/6 mice.      	|
 | TransPAT   	| Transfer of tylosin-perturbed cecal contents in early life C57BL/6 wild-type mice. |
 | GF-PAT     	| The effect of early life antibiotic treatment in germ-free or SPF colonized C57BL/6 mice. 	|
+| IgA-Seq     | 16S microbial composition of IgA-bound or IgA-unbound bacteria 	|
 
 ```
 ── Paper-Ruiz-2017/
@@ -34,6 +35,8 @@ The data is structured according the experiment. Within the each experiment fold
 │     └── IgA_concentration/
 │     └── Physiology/
 │     └── Nanostring/
+│
+│   └── IgA-Seq/
 ```
 
 
